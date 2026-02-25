@@ -1,0 +1,74 @@
+# Source
+src/
+
+# TypeScript configs
+tsconfig.json
+tsconfig.build.json
+tsconfig.test.json
+tsconfig.eslint.json
+
+# Environment
+.env
+.env.*
+
+# Claude Code
+.claude/
+
+# IDE
+.vscode/
+.idea/
+
+# Documentation (dev-only)
+docs/
+AGENTS.md
+CLAUDE.md
+PUBLISHING.md
+
+# Git
+.git/
+.github/
+.gitlab-ci.yml
+
+# npm config
+.npmrc
+.npmrc.example
+
+# ESLint / Vitest
+eslint.config.mjs
+.eslintignore
+vitest.config.ts
+
+# Dev container
+.devcontainer/
+
+# Lockfiles & package manager
+yarn.lock
+package-lock.json
+pnpm-lock.yaml
+.yarnrc.yml
+.husky/
+.yarn/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Coverage
+coverage/
+
+# Test files
+*.spec.ts
+*.test.ts
+*.spec.js
+*.test.js
+
+# Temp
+tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor temp files
+*.swp
+*.swo
+*~

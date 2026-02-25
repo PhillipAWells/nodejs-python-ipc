@@ -1,0 +1,27 @@
+{
+	"name": "pawells-nodejs-python-ipc",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/common-utils:2": {},
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "lts"
+		}
+	},
+	"postCreateCommand": "bash .devcontainer/scripts/postCreate.sh",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"vscode.typescript-language-features",
+				"ms-vscode.js-debug",
+				"vscode.npm",
+				"eamodio.gitlens"
+			]
+		}
+	},
+	"remoteUser": "dev",
+	"updateRemoteUserUID": true
+}
