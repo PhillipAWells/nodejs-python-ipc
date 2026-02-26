@@ -1,7 +1,9 @@
 {
 	"extends": "./tsconfig.json",
 	"compilerOptions": {
-		"allowJs": true
+		"allowJs": true,
+		"allowImportingTsExtensions": true,
+		"noEmit": true
 	},
 	"include": [
 		"src/**/*.ts",
