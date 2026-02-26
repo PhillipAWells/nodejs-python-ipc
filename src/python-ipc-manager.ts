@@ -126,6 +126,7 @@ export abstract class PythonIpcManager {
 	private static readonly DEFAULT_MAX_CONCURRENT = 2;
 	private static readonly DESTROY_TIMEOUT_MS = 5000;
 	private static readonly SPAWN_TIMEOUT_MS = 10000;
+	private static readonly MAX_STDERR_BUFFER_SIZE = 10 * 1024; // 10KB
 	/* eslint-enable no-magic-numbers */
 
 	private process: ChildProcess | null = null;
@@ -316,7 +317,12 @@ export abstract class PythonIpcManager {
 
 		this.process.stderr?.on('data', (data: Buffer) => {
 			const output = data.toString();
-			stderrBuffer += output;
+			if (stderrBuffer.length < PythonIpcManager.MAX_STDERR_BUFFER_SIZE) {
+				stderrBuffer += output;
+				if (stderrBuffer.length >= PythonIpcManager.MAX_STDERR_BUFFER_SIZE) {
+					stderrBuffer += '\n... (stderr buffer truncated) ...';
+				}
+			}
 			// Also log in real-time if logger or DEBUG is enabled
 			this.logDebug('Python stderr output', { output });
 		});
