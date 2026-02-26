@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { EventHandler } from '@pawells/rxjs-events';
 import { Logger } from '@pawells/logger';
 import { resolvePython, checkPythonVersion, checkPythonPackages } from './python-resolver';
@@ -292,6 +293,9 @@ export abstract class PythonIpcManager {
 		}
 
 		const scriptPath = this.getScriptPath();
+		if (!existsSync(scriptPath)) {
+			throw new Error(`Python script not found: ${scriptPath}`);
+		}
 		this.process = spawn(pythonPath, [scriptPath], {
 			stdio: ['pipe', 'pipe', 'pipe'],
 			timeout: PythonIpcManager.SPAWN_TIMEOUT_MS,
