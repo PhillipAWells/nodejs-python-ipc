@@ -196,10 +196,15 @@ export abstract class PythonIpcManager {
 	/**
 	 * Creates a new PythonIpcManager instance.
 	 * @param options Configuration options for timeout and concurrency
+	 * @throws When maxConcurrent is not a positive integer
 	 */
 	constructor(options?: PythonIpcManagerOptions) {
 		this.requestTimeoutMs = options?.requestTimeoutMs ?? PythonIpcManager.DEFAULT_REQUEST_TIMEOUT_MS;
-		this.maxConcurrent = options?.maxConcurrent ?? PythonIpcManager.DEFAULT_MAX_CONCURRENT;
+		const maxConcurrent = options?.maxConcurrent ?? PythonIpcManager.DEFAULT_MAX_CONCURRENT;
+		if (maxConcurrent <= 0) {
+			throw new Error('maxConcurrent must be a positive integer');
+		}
+		this.maxConcurrent = maxConcurrent;
 		this.logger = options?.logger;
 	}
 
