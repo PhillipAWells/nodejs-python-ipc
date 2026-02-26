@@ -135,6 +135,8 @@ export abstract class PythonIpcManager {
 
 	private initializePromise: Promise<void> | null = null;
 
+	private destroyPromise: Promise<void> | null = null;
+
 	private readonly pending = new Map<
 		string,
 		{
@@ -506,6 +508,25 @@ export abstract class PythonIpcManager {
 	 * ```
 	 */
 	public async destroy(): Promise<void> {
+		if (!this.process) return;
+		if (this.destroyPromise) {
+			await this.destroyPromise;
+			return;
+		}
+
+		this.destroyPromise = this._doDestroy().finally(() => {
+			this.destroyPromise = null;
+		});
+		await this.destroyPromise;
+	}
+
+	/**
+	 * Internal implementation of the destroy process.
+	 *
+	 * This is called by destroy() and contains the actual shutdown logic.
+	 * It is separated to enable proper promise deduplication for concurrent calls.
+	 */
+	private async _doDestroy(): Promise<void> {
 		if (!this.process) return;
 
 		// Reject all pending requests with a descriptive error (Fix A)
