@@ -1,0 +1,4 @@
+if grep -qi "co-authored-by:" "$1"; then
+  echo "Error: Co-authored-by is not allowed in commit messages." >&2
+  exit 1
+fi

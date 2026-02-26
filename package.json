@@ -1,0 +1,83 @@
+{
+	"name": "@pawells/nodejs-python-ipc",
+	"displayName": "Node.js Python IPC",
+	"version": "1.0.1",
+	"description": "TypeScript library for managing long-lived Python child processes with JSON-based IPC",
+	"type": "module",
+	"main": "./build/index.js",
+	"types": "./build/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./build/index.d.ts",
+			"import": "./build/index.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc --project tsconfig.build.json",
+		"start": "node build/index.js",
+		"dev": "tsc --project tsconfig.build.json && node build/index.js",
+		"watch": "tsc --watch --project tsconfig.build.json",
+		"typecheck": "tsc --project tsconfig.test.json --noEmit",
+		"lint": "eslint src/",
+		"lint:fix": "eslint src/ --fix",
+		"test": "vitest run",
+		"test:ui": "vitest --ui",
+		"test:coverage": "vitest --coverage",
+		"prepublishOnly": "npm run build",
+		"prepare": "husky"
+	},
+	"devDependencies": {
+		"@eslint/js": "^10.0.1",
+		"@stylistic/eslint-plugin": "^5.9.0",
+		"@types/node": "^25.3.0",
+		"@typescript-eslint/eslint-plugin": "^8.0.0",
+		"@typescript-eslint/parser": "^8.0.0",
+		"@vitest/coverage-v8": "^4.0.18",
+		"@vitest/ui": "^4.0.18",
+		"eslint": "^10.0.1",
+		"eslint-import-resolver-typescript": "^4.4.4",
+		"eslint-plugin-import": "^2.31.0",
+		"eslint-plugin-unused-imports": "^4.0.0",
+		"globals": "^17.3.0",
+		"husky": "^9.1.7",
+		"typescript": "^5.3.3",
+		"vitest": "^4.0.18"
+	},
+	"keywords": [
+		"nodejs",
+		"python",
+		"ipc",
+		"child-process",
+		"typescript",
+		"json",
+		"rpc"
+	],
+	"author": "Phillip Aaron Wells",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/PhillipAWells/nodejs-python-ipc.git"
+	},
+	"bugs": {
+		"url": "https://github.com/PhillipAWells/nodejs-python-ipc/issues"
+	},
+	"homepage": "https://github.com/PhillipAWells/nodejs-python-ipc#readme",
+	"engines": {
+		"node": ">=24.0.0"
+	},
+	"packageManager": "yarn@4.12.0",
+	"files": [
+		"build/",
+		"README.md",
+		"LICENSE"
+	],
+	"publishConfig": {
+		"access": "public"
+	},
+	"dependencies": {
+		"@pawells/rxjs-events": "^1.0.3"
+	},
+	"optionalDependencies": {
+		"@pawells/logger": "^1.0.3"
+	}
+}

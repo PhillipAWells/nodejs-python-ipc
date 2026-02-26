@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      eslint:
+        patterns:
+          - "@eslint/*"
+          - "@stylistic/*"
+          - "@typescript-eslint/*"
+          - "eslint*"
+          - "globals"
+      vitest:
+        patterns:
+          - "@vitest/*"
+          - "vitest"
+      typescript:
+        patterns:
+          - "typescript"
+          - "@types/*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

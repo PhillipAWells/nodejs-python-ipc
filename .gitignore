@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+
+# Build output
+build/
+dist/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Temp
+tmp/
+
+# Environment
+.env
+.env.local
+.env.*.local
+.npmrc
+
+# TypeScript
+*.tsbuildinfo
+
+# Yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Logs
+logs/
+*.log
+yarn-debug.log*
+yarn-error.log*
+npm-debug.log*
+lerna-debug.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
