@@ -439,11 +439,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@pawells/logger@npm:^1.0.3":
+  version: 1.0.3
+  resolution: "@pawells/logger@npm:1.0.3"
+  checksum: 10c0/dcac89f90ebd694d9fb293b86d614e8b46f4d1fc5cee1fb257fa0f0c4a066421a75d33f4c55bcc5e9f2278e9e210c833b1757839f90e0840bcbf08c03483a206
+  languageName: node
+  linkType: hard
+
 "@pawells/nodejs-python-ipc@workspace:.":
   version: 0.0.0-use.local
   resolution: "@pawells/nodejs-python-ipc@workspace:."
   dependencies:
     "@eslint/js": "npm:^10.0.1"
+    "@pawells/logger": "npm:^1.0.3"
+    "@pawells/rxjs-events": "npm:^1.0.3"
     "@stylistic/eslint-plugin": "npm:^5.9.0"
     "@types/node": "npm:^25.3.0"
     "@typescript-eslint/eslint-plugin": "npm:^8.0.0"
@@ -456,11 +465,30 @@ __metadata:
     eslint-plugin-unused-imports: "npm:^4.0.0"
     globals: "npm:^17.3.0"
     husky: "npm:^9.1.7"
-    rxjs: "npm:^7.8.2"
     typescript: "npm:^5.3.3"
     vitest: "npm:^4.0.18"
+  dependenciesMeta:
+    "@pawells/logger":
+      optional: true
   languageName: unknown
   linkType: soft
+
+"@pawells/rxjs-events@npm:^1.0.3":
+  version: 1.0.3
+  resolution: "@pawells/rxjs-events@npm:1.0.3"
+  dependencies:
+    "@pawells/typescript-common": "npm:^1.1.6"
+    rxjs: "npm:^7.8.2"
+  checksum: 10c0/f5192e7e1c4c9840f302bfdecd3ca25347842ad1cf6f26d7920cab7ae4696d0418885728f9762fd8c67aa66e0d088f4ca4eda56a1b97623678c2d69e2d1a3c9d
+  languageName: node
+  linkType: hard
+
+"@pawells/typescript-common@npm:^1.1.6":
+  version: 1.1.6
+  resolution: "@pawells/typescript-common@npm:1.1.6"
+  checksum: 10c0/530f2ff063608a0ab7fc7ea61792a6764600529a0df94175299e59ec4d071b2dda74fac797fa65ad8defbd51e711e8e6bff86f693a6f4e5a4087af4b24e00b08
+  languageName: node
+  linkType: hard
 
 "@polka/url@npm:^1.0.0-next.24":
   version: 1.0.0-next.29

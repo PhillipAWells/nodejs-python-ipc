@@ -26,7 +26,6 @@
 		"prepublishOnly": "npm run build",
 		"prepare": "husky"
 	},
-	"dependencies": {},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
 		"@stylistic/eslint-plugin": "^5.9.0",
@@ -74,5 +73,11 @@
 	],
 	"publishConfig": {
 		"access": "public"
+	},
+	"dependencies": {
+		"@pawells/rxjs-events": "^1.0.3"
+	},
+	"optionalDependencies": {
+		"@pawells/logger": "^1.0.3"
 	}
 }
