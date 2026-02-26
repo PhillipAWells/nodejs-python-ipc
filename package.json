@@ -1,7 +1,7 @@
 {
 	"name": "@pawells/nodejs-python-ipc",
 	"displayName": "Node.js Python IPC",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "TypeScript library for managing long-lived Python child processes with JSON-based IPC",
 	"type": "module",
 	"main": "./build/index.js",
@@ -29,7 +29,7 @@
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
 		"@stylistic/eslint-plugin": "^5.9.0",
-		"@types/node": "^25.3.0",
+		"@types/node": "^25.3.2",
 		"@typescript-eslint/eslint-plugin": "^8.0.0",
 		"@typescript-eslint/parser": "^8.0.0",
 		"@vitest/coverage-v8": "^4.0.18",
