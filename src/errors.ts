@@ -5,7 +5,7 @@ export class PythonNotFoundError extends Error {
 	public override readonly name = 'PythonNotFoundError';
 
 	constructor(
-		message = 'Python executable not found. Ensure Python is installed and available in PATH.'
+		message = 'Python executable not found. Ensure Python is installed and available in PATH.',
 	) {
 		super(message);
 		Object.setPrototypeOf(this, PythonNotFoundError.prototype);
@@ -21,10 +21,10 @@ export class PythonVersionError extends Error {
 	constructor(
 		public readonly foundVersion: string,
 		public readonly requiredVersion: string,
-		message?: string
+		message?: string,
 	) {
 		super(
-			message ?? `Python ${requiredVersion} or higher is required, but found ${foundVersion}.`
+			message ?? `Python ${requiredVersion} or higher is required, but found ${foundVersion}.`,
 		);
 		Object.setPrototypeOf(this, PythonVersionError.prototype);
 	}
@@ -38,11 +38,11 @@ export class PythonDependencyError extends Error {
 
 	constructor(
 		public readonly dependency: string,
-		message?: string
+		message?: string,
 	) {
 		super(
 			message ??
-				`Required Python dependency '${dependency}' is not installed. Run: pip install ${dependency}`
+				`Required Python dependency '${dependency}' is not installed. Run: pip install ${dependency}`,
 		);
 		Object.setPrototypeOf(this, PythonDependencyError.prototype);
 	}
