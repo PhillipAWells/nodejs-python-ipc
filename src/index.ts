@@ -2,8 +2,8 @@
 export {
 	PythonNotFoundError,
 	PythonVersionError,
-	PythonDependencyError
-} from './errors.ts';
+	PythonDependencyError,
+} from './errors';
 
 // Python utilities
 export {
@@ -11,15 +11,17 @@ export {
 	checkPythonVersion,
 	checkPythonPackages,
 	parsePythonVersion,
-	assertVersionMeetsRequirement
-} from './python-resolver.ts';
+	assertVersionMeetsRequirement,
+} from './python-resolver';
 
 // IPC Manager
 export type {
 	PythonRequest,
-	PythonResponse
-} from './python-ipc-manager.ts';
+	PythonResponse,
+	PythonIpcManagerOptions,
+	ProcessLifecycleEvent,
+} from './python-ipc-manager';
 
 export {
-	PythonIpcManager
-} from './python-ipc-manager.ts';
+	PythonIpcManager,
+} from './python-ipc-manager';

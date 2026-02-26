@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { PythonNotFoundError, PythonVersionError, PythonDependencyError } from './errors.ts';
+import { PythonNotFoundError, PythonVersionError, PythonDependencyError } from './errors';
 
 const execFileAsync = promisify(execFile);
 
@@ -9,9 +9,10 @@ const execFileAsync = promisify(execFile);
  */
 export function parsePythonVersion(versionOutput: string): [number, number, number] {
 	const match = /Python (\d+)\.(\d+)\.(\d+)/.exec(versionOutput);
-	if (!match) {
+	if (!match?.[1] || !match?.[2] || !match?.[3]) {
 		throw new Error(`Cannot parse Python version from: ${versionOutput}`);
 	}
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	return [parseInt(match[1]!, 10), parseInt(match[2]!, 10), parseInt(match[3]!, 10)];
 }
 
@@ -21,7 +22,7 @@ export function parsePythonVersion(versionOutput: string): [number, number, numb
  */
 export function assertVersionMeetsRequirement(
 	found: [number, number, number],
-	required: string
+	required: string,
 ): void {
 	const parts = required.split('.').map((p) => parseInt(p, 10));
 	const [reqMajor = 0, reqMinor = 0] = parts;
@@ -37,26 +38,34 @@ export function assertVersionMeetsRequirement(
  * Resolves the path to a Python 3 executable.
  * Tries: PYTHON_PATH env var, then 'python3', then 'python'.
  * Throws PythonNotFoundError if none found.
+ * Throws if PYTHON_PATH is set but is invalid.
  */
 export async function resolvePython(): Promise<string> {
-	const candidates = [
-		process.env['PYTHON_PATH'],
-		'python3',
-		'python'
-	].filter((c): c is string => Boolean(c));
+	const pythonPathEnv = process.env['PYTHON_PATH'];
+	const candidates: string[] = [];
+
+	if (pythonPathEnv) {
+		candidates.push(pythonPathEnv);
+	}
+	candidates.push('python3', 'python');
 
 	for (const candidate of candidates) {
 		try {
 			const { stdout, stderr } = await execFileAsync(candidate, ['--version'], {
-				encoding: 'utf8'
+				encoding: 'utf8',
 			});
 			const output = (stdout + stderr).trim();
 			if (output.startsWith('Python 3')) {
 				return candidate;
 			}
-		}
-		catch {
-			// Try next candidate
+		} catch {
+			// If PYTHON_PATH was explicitly set but failed, throw a specific error
+			if (candidate === pythonPathEnv) {
+				throw new PythonNotFoundError(
+					`PYTHON_PATH environment variable is set to "${pythonPathEnv}", but the executable is not found or is not a valid Python 3 installation.`,
+				);
+			}
+			// Otherwise try next candidate
 		}
 	}
 	throw new PythonNotFoundError();
@@ -69,7 +78,7 @@ export async function resolvePython(): Promise<string> {
  */
 export async function checkPythonVersion(pythonPath: string, minVersion: string): Promise<void> {
 	const { stdout, stderr } = await execFileAsync(pythonPath, ['--version'], {
-		encoding: 'utf8'
+		encoding: 'utf8',
 	});
 	const versionOutput = (stdout + stderr).trim();
 	const found = parsePythonVersion(versionOutput);
@@ -85,10 +94,9 @@ export async function checkPythonPackages(pythonPath: string, packages: string[]
 	for (const pkg of packages) {
 		try {
 			await execFileAsync(pythonPath, ['-m', 'pip', 'show', pkg], {
-				encoding: 'utf8'
+				encoding: 'utf8',
 			});
-		}
-		catch {
+		} catch {
 			throw new PythonDependencyError(pkg);
 		}
 	}
