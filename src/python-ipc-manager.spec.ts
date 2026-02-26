@@ -5,6 +5,11 @@ import { PythonIpcManager } from './python-ipc-manager';
 // Mock child_process module
 vi.mock('node:child_process');
 
+// Mock the fs module
+vi.mock('node:fs', () => ({
+	existsSync: vi.fn(),
+}));
+
 // Mock the python resolver functions
 vi.mock('./python-resolver', () => ({
 	resolvePython: vi.fn(),
@@ -13,9 +18,11 @@ vi.mock('./python-resolver', () => ({
 }));
 
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { resolvePython, checkPythonVersion, checkPythonPackages } from './python-resolver';
 
 const mockSpawn = vi.mocked(spawn);
+const mockExistsSync = vi.mocked(existsSync);
 const mockResolvePython = vi.mocked(resolvePython);
 const mockCheckPythonVersion = vi.mocked(checkPythonVersion);
 const mockCheckPythonPackages = vi.mocked(checkPythonPackages);
@@ -101,6 +108,8 @@ describe('PythonIpcManager', () => {
 		mockCheckPythonVersion.mockClear();
 		mockCheckPythonPackages.mockClear();
 		mockSpawn.mockClear();
+		mockExistsSync.mockClear();
+		mockExistsSync.mockReturnValue(true);
 	});
 
 	describe('initialize', () => {
