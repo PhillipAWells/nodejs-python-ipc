@@ -316,7 +316,7 @@ export abstract class PythonIpcManager {
 		// Set up readline interface to read line-delimited JSON from stdout
 		this.readline = createInterface({
 			input: this.process.stdout,
-			crlfDelay: Infinity,
+			crlfDelay: Infinity, // Accept lines of any length; no CRLF size restriction
 		});
 
 		// Buffer stderr output for error reporting
@@ -349,7 +349,7 @@ export abstract class PythonIpcManager {
 						pending.resolve(response.data);
 					} else {
 						pending.reject(
-							new Error(response.error ?? 'Python process returned an error'),
+							new Error(response.error ?? `Python request ${response.requestId} failed without error details`),
 						);
 					}
 				}
@@ -460,8 +460,6 @@ export abstract class PythonIpcManager {
 					timeout,
 				});
 
-				// Fix C: Check if stdin is writable before attempting to write
-				// This prevents "write after end" errors when the process is shutting down
 				// Fix C: Check if stdin is writable before attempting to write
 				// This prevents "write after end" errors when the process is shutting down
 				if (!this.process?.stdin?.writable) {
