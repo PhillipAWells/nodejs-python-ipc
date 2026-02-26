@@ -60,7 +60,33 @@ The manager uses a semaphore pattern to limit concurrent requests:
 
 This prevents overwhelming the Python process with simultaneous requests.
 
-### 3. UUID-Based Request/Response Correlation
+### 3. Process Lifecycle Events
+
+The manager exposes a public `ProcessEvents` field of type `EventHandler<{ ProcessLifecycle: ProcessLifecycleEvent }>` that emits events when:
+
+- **exit event**: Process exits (includes exit code and stderr buffer)
+- **error event**: Process encounters a runtime error (includes error message and stderr buffer)
+
+The `EventHandler` wraps the payload under the `ProcessLifecycle` key. Consumers subscribe via:
+```typescript
+// Callback style
+manager.ProcessEvents.Subscribe((event) => {
+  const { type } = event.ProcessLifecycle;
+  if (type === 'exit') {
+    console.log(`Process exited with code: ${event.ProcessLifecycle.exitCode}`);
+  }
+});
+
+// Async iteration style
+for await (const event of manager.ProcessEvents) {
+  const lifecycle = event.ProcessLifecycle;
+  if (lifecycle.type === 'exit') {
+    console.log(`Process exited: ${lifecycle.exitCode}`);
+  }
+}
+```
+
+### 5. UUID-Based Request/Response Correlation
 
 Each request includes a unique `requestId` (UUID v4):
 
@@ -83,13 +109,13 @@ interface PythonResponse {
 }
 ```
 
-### 4. JSON Protocol over stdout/stdin
+### 6. JSON Protocol over stdout/stdin
 
 - **Request**: Single-line JSON sent to Python's stdin
 - **Response**: Single-line JSON read from Python's stdout
 - readline module parses newline-delimited messages
 
-### 5. Graceful Shutdown
+### 7. Graceful Shutdown
 
 The `destroy()` method follows a three-step graceful shutdown:
 
@@ -99,7 +125,7 @@ The `destroy()` method follows a three-step graceful shutdown:
 
 This ensures resources are cleaned up properly.
 
-### 6. Error Propagation
+### 8. Error Propagation
 
 Python errors are captured and propagated as Node.js errors:
 
@@ -111,11 +137,16 @@ Python errors are captured and propagated as Node.js errors:
 
 The `PythonIpcManager` maintains:
 
-- `_process: ChildProcess | null` — The spawned Python process
-- `_readline: Interface | null` — readline interface for parsing stdout
-- `_pending: Map<string, { resolve, reject }>` — Pending request callbacks keyed by requestId
-- `_inFlightCount: number` — Number of active concurrent requests
-- `_waitQueue: Array<{ resolve, reject }>` — Requests waiting for a concurrency slot
+- `process: ChildProcess | null` — The spawned Python process
+- `readline: Interface | null` — readline interface for parsing stdout
+- `pending: Map<string, { resolve, reject, timeout }>` — Pending request callbacks keyed by requestId
+- `initialized: boolean` — Whether the process is currently running
+- `initializePromise: Promise<void> | null` — De-duplicates concurrent initialize() calls
+- `inFlightCount: number` — Number of active concurrent requests
+- `maxConcurrent: number` — Maximum allowed concurrent requests
+- `requestTimeoutMs: number` — Timeout for individual requests
+- `waitQueue: Array<() => void>` — Requests waiting for a concurrency slot
+- `logger?: Logger` — Optional logger instance for debug output
 
 ## TypeScript Configuration
 
@@ -188,6 +219,20 @@ class SessionManager extends PythonIpcManager {
 }
 ```
 
+## Public API Methods
+
+Beyond the abstract methods and protected `send()`, the `PythonIpcManager` class provides:
+
+- **`initialize(): Promise<void>`** — Validates Python environment and spawns process. Handles concurrent calls safely via `initializePromise` de-duplication (only one initialization runs at a time).
+- **`destroy(): Promise<void>`** — Gracefully shuts down the Python process and rejects all pending requests.
+- **`isInitialized: boolean`** (getter) — Returns true if the process is currently running.
+- **`setupSignalHandlers(): void`** — Registers SIGTERM/SIGINT handlers for graceful shutdown in CLI and server applications.
+- **`ProcessEvents: EventHandler<ProcessLifecycleEvent>`** (public property) — Emits exit and error lifecycle events.
+
+### Input Validation
+
+The `send()` method validates that the request `type` is not empty or falsy, throwing an error if validation fails.
+
 ## Error Types and When They're Thrown
 
 ### `PythonNotFoundError`
@@ -223,13 +268,36 @@ Thrown by `send()` when:
 Thrown by `send()` when:
 - Python returns `{ success: false, error: "..." }`
 
+## Static Constants
+
+The `PythonIpcManager` class defines the following static constants:
+
+- `DEFAULT_REQUEST_TIMEOUT_MS = 60_000` — Default timeout for individual requests (60 seconds)
+- `DEFAULT_MAX_CONCURRENT = 2` — Default maximum concurrent requests
+- `DESTROY_TIMEOUT_MS = 5_000` — Timeout for graceful process shutdown (5 seconds) before SIGKILL
+- `SPAWN_TIMEOUT_MS = 10_000` — Timeout for spawning the Python process (10 seconds)
+
+## Dependencies
+
+### Runtime Dependencies
+- **`@pawells/rxjs-events`** (required) — Event handling framework. Used for `ProcessEvents: EventHandler<ProcessLifecycleEvent>`.
+
+### Optional Dependencies
+- **`@pawells/logger`** (optional) — Structured logging library. When provided via `PythonIpcManagerOptions.logger`, used for all debug logging. Falls back to `DEBUG=nodejs-python-ipc` env var when not provided.
+
+### Node.js Built-ins
+- `child_process` — Process spawning
+- `readline` — Line-delimited JSON parsing from stdout
+- `crypto` — UUID generation for request IDs
+- `util` — `promisify` for shell command execution
+
 ## Key Implementation Notes
 
-- **No runtime dependencies**: Only uses Node.js built-ins (`child_process`, `readline`, `crypto`, `util`)
 - **ESM only**: `"type": "module"` in package.json. Use `.js` extensions in internal imports.
-- **Process spawning**: Uses `child_process.spawn()` with `stdio: ['pipe', 'pipe', 'inherit']` to capture stdout, inherit stderr for visibility
+- **Process spawning**: Uses `child_process.spawn()` with `stdio: ['pipe', 'pipe', 'pipe']` to capture both stdout and stderr
 - **UUID generation**: Uses `crypto.randomUUID()` for request IDs
 - **Event loop integration**: All I/O is async via Promises; no blocking calls
+- **Logging**: Uses optional `@pawells/logger` if provided, otherwise respects `DEBUG=nodejs-python-ipc` environment variable
 
 ## CI/CD
 
