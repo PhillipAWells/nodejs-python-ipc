@@ -18,7 +18,8 @@
 				"vscode.typescript-language-features",
 				"ms-vscode.js-debug",
 				"vscode.npm",
-				"eamodio.gitlens"
+				"eamodio.gitlens",
+				"Anthropic.claude-code"
 			]
 		}
 	},

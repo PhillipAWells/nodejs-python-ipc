@@ -102,15 +102,13 @@ describe('python-resolver', () => {
 			// Integration test - attempts to verify Python version without mocking
 			try {
 				const { checkPythonVersion: checkFunc } = await import('./python-resolver');
-				// Try to check a version - will fail if Python not available
-				// But that's okay, we're testing the codepath
 				await checkFunc('/usr/bin/python3', '3.8');
-				// If it succeeds, Python is installed
-				expect(true).toBe(true);
+				// Success path: a real Python 3.8+ binary exists at /usr/bin/python3
+				expect(true).toBe(true); // intentional no-op: success is the assertion
 			} catch (error) {
-				// Any error (not found, wrong version) is acceptable
-				// We just want to exercise the code path
-				expect(error).toBeDefined();
+				// Acceptable failures: Python not installed, version too old, or
+				// the binary path is wrong for this system.
+				expect(error).toBeInstanceOf(Error);
 			}
 		});
 	});
@@ -196,9 +194,20 @@ describe('python-resolver', () => {
 			}
 		});
 
-		it('throws when patch version is lower but major and minor match', () => {
-			// When required is "3.10" and found is [3, 10, 0], it should pass
-			expect(() => assertVersionMeetsRequirement([3, 10, 0], '3.10')).not.toThrow();
+		it('passes when patch versions are equal (major.minor.patch required)', () => {
+			expect(() => assertVersionMeetsRequirement([3, 10, 0], '3.10.0')).not.toThrow();
+		});
+
+		it('throws when patch is lower and major.minor match (full semver required)', () => {
+			expect(() => assertVersionMeetsRequirement([3, 9, 0], '3.9.1')).toThrow(PythonVersionError);
+		});
+
+		it('passes when patch is higher and major.minor match (full semver required)', () => {
+			expect(() => assertVersionMeetsRequirement([3, 9, 2], '3.9.1')).not.toThrow();
+		});
+
+		it('throws when only patch of required is specified and found patch is lower', () => {
+			expect(() => assertVersionMeetsRequirement([3, 8, 5], '3.8.6')).toThrow(PythonVersionError);
 		});
 
 		it('correctly parses required version with decimals', () => {

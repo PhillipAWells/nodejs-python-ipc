@@ -1,7 +1,7 @@
 {
 	"name": "@pawells/nodejs-python-ipc",
 	"displayName": "Node.js Python IPC",
-	"version": "1.0.3",
+	"version": "1.1.0",
 	"description": "TypeScript library for managing long-lived Python child processes with JSON-based IPC",
 	"type": "module",
 	"main": "./build/index.js",
@@ -14,8 +14,6 @@
 	},
 	"scripts": {
 		"build": "tsc --project tsconfig.build.json",
-		"start": "node build/index.js",
-		"dev": "tsc --project tsconfig.build.json && node build/index.js",
 		"watch": "tsc --watch --project tsconfig.build.json",
 		"typecheck": "tsc --project tsconfig.test.json --noEmit",
 		"lint": "eslint src/",
@@ -23,22 +21,23 @@
 		"test": "vitest run",
 		"test:ui": "vitest --ui",
 		"test:coverage": "vitest --coverage",
-		"prepublishOnly": "npm run build",
+		"pipeline": "yarn typecheck && yarn lint && yarn test && yarn build",
+		"prepublishOnly": "yarn build",
 		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@stylistic/eslint-plugin": "^5.9.0",
-		"@types/node": "^25.3.2",
-		"@typescript-eslint/eslint-plugin": "^8.0.0",
-		"@typescript-eslint/parser": "^8.0.0",
+		"@stylistic/eslint-plugin": "^5.10.0",
+		"@types/node": "^25.4.0",
+		"@typescript-eslint/eslint-plugin": "^8.57.0",
+		"@typescript-eslint/parser": "^8.57.0",
 		"@vitest/coverage-v8": "^4.0.18",
 		"@vitest/ui": "^4.0.18",
-		"eslint": "^10.0.1",
+		"eslint": "^10.0.3",
 		"eslint-import-resolver-typescript": "^4.4.4",
 		"eslint-plugin-import": "^2.31.0",
 		"eslint-plugin-unused-imports": "^4.0.0",
-		"globals": "^17.3.0",
+		"globals": "^17.4.0",
 		"husky": "^9.1.7",
 		"typescript": "^5.3.3",
 		"vitest": "^4.0.18"
@@ -75,9 +74,9 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@pawells/rxjs-events": "^1.0.3"
+		"@pawells/rxjs-events": "^1.1.0"
 	},
 	"optionalDependencies": {
-		"@pawells/logger": "^1.0.3"
+		"@pawells/logger": "^1.2.2"
 	}
 }

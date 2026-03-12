@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createMockTransport } from '@pawells/logger/testing/vitest';
+import { Logger, LogLevel } from '@pawells/logger';
 import { Readable, Writable } from 'node:stream';
 import { PythonIpcManager } from './python-ipc-manager';
 
@@ -32,10 +34,6 @@ class MockReadableStream extends Readable {
 	constructor() {
 		super({ read() {} });
 	}
-
-	public emitLine(line: string) {
-		this.emit('line', line);
-	}
 }
 
 // Mock Writable stream for stdin
@@ -64,7 +62,7 @@ function createMockProcess() {
 	const exitHandlers: Function[] = [];
 	const errorHandlers: Function[] = [];
 
-	return {
+	const mockProc = {
 		stdout,
 		stderr,
 		stdin,
@@ -75,12 +73,31 @@ function createMockProcess() {
 			} else if (event === 'error') {
 				errorHandlers.push(handler);
 			}
-			return stdout;
+			return mockProc;
 		}),
-		once: vi.fn(),
+		// _doInitialize registers once('spawn') and once('error') as a startup guard.
+		// Use a microtask (Promise.resolve().then) rather than setImmediate so that
+		// the spawn event fires even when vi.useFakeTimers() is active (fake timers
+		// intercept setImmediate/setTimeout but never intercept microtasks).
+		once: vi.fn((event: string, handler: Function) => {
+			if (event === 'spawn') {
+				Promise.resolve().then(() => handler());
+			}
+			return mockProc;
+		}),
+		removeListener: vi.fn(),
 		exitHandlers,
 		errorHandlers,
+		/** Fire all registered 'exit' handlers (mirrors real process behaviour). */
+		triggerExit(code: number | null) {
+			for (const h of [...exitHandlers]) h(code);
+		},
+		/** Fire all registered 'error' handlers. */
+		triggerError(err: Error) {
+			for (const h of [...errorHandlers]) h(err);
+		},
 	};
+	return mockProc;
 }
 
 // Test subclass that provides concrete implementations
@@ -110,6 +127,13 @@ describe('PythonIpcManager', () => {
 		mockSpawn.mockClear();
 		mockExistsSync.mockClear();
 		mockExistsSync.mockReturnValue(true);
+	});
+
+	// Guard against fake timers leaking between tests. If a test calls
+	// vi.useFakeTimers() and then times out before vi.useRealTimers(), all
+	// subsequent tests in the file would run with fake timers still active.
+	afterEach(() => {
+		vi.useRealTimers();
 	});
 
 	describe('initialize', () => {
@@ -239,7 +263,8 @@ describe('PythonIpcManager', () => {
 
 			expect(mockSpawn).toHaveBeenCalledWith('/usr/bin/python3', ['/fake/script.py'], {
 				stdio: ['pipe', 'pipe', 'pipe'],
-				timeout: expect.any(Number),
+				// timeout is intentionally absent: spawn()'s timeout option kills the process
+				// after N ms of total runtime, not startup time.
 			});
 		});
 
@@ -359,21 +384,10 @@ describe('PythonIpcManager', () => {
 
 		it('SIGKILLs process if it does not exit within timeout', async () => {
 			vi.useFakeTimers();
-			// Create a mock process that never emits 'exit'
-			const mockProcess = {
-				stdout: new MockReadableStream(),
-				stderr: new MockReadableStream(),
-				stdin: new MockStdin(),
-				kill: vi.fn(),
-				on: vi.fn((_event: string, _handler: Function) => {
-					// We intentionally don't call the handler or store it
-					// so the exit event never fires
-					return mockProcess;
-				}),
-				once: vi.fn(),
-				exitHandlers: [] as Function[],
-				errorHandlers: [] as Function[],
-			};
+			// Use createMockProcess() which triggers the spawn event via a microtask,
+			// keeping initialize() compatible with fake timers. The exit event is
+			// simply never triggered so destroy() must resort to SIGKILL after its timeout.
+			const mockProcess = createMockProcess();
 
 			mockResolvePython.mockResolvedValue('/usr/bin/python3');
 			mockCheckPythonVersion.mockResolvedValue(undefined);
@@ -394,7 +408,6 @@ describe('PythonIpcManager', () => {
 
 			// Verify that SIGKILL was called because exit event never fired
 			expect(mockProcess.kill).toHaveBeenCalledWith('SIGKILL');
-			vi.useRealTimers();
 		});
 
 		it('provides destroy method for cleanup', async () => {
@@ -426,7 +439,7 @@ describe('PythonIpcManager', () => {
 
 			const destroyPromise = manager.destroy();
 			setImmediate(() => {
-				mockProcess.exitHandlers[1](0);
+				mockProcess.triggerExit(0);
 			});
 			await destroyPromise;
 
@@ -449,7 +462,7 @@ describe('PythonIpcManager', () => {
 			const destroyPromise = manager.destroy();
 
 			setImmediate(() => {
-				mockProcess.exitHandlers[1](0);
+				mockProcess.triggerExit(0);
 			});
 
 			await destroyPromise;
@@ -478,7 +491,7 @@ describe('PythonIpcManager', () => {
 			const destroyPromise = manager.destroy();
 
 			setImmediate(() => {
-				mockProcess.exitHandlers[1](0);
+				mockProcess.triggerExit(0);
 			});
 
 			await destroyPromise;
@@ -500,7 +513,7 @@ describe('PythonIpcManager', () => {
 			const destroyPromise = manager.destroy();
 
 			setImmediate(() => {
-				mockProcess.exitHandlers[1](0);
+				mockProcess.triggerExit(0);
 			});
 
 			await destroyPromise;
@@ -522,7 +535,7 @@ describe('PythonIpcManager', () => {
 
 			const destroyPromise = manager.destroy();
 			setImmediate(() => {
-				mockProcess.exitHandlers[1](0);
+				mockProcess.triggerExit(0);
 			});
 			await destroyPromise;
 
@@ -543,7 +556,7 @@ describe('PythonIpcManager', () => {
 
 			const destroyPromise = manager.destroy();
 			setImmediate(() => {
-				mockProcess.exitHandlers[1](0);
+				mockProcess.triggerExit(0);
 			});
 			await destroyPromise;
 
@@ -664,17 +677,10 @@ describe('PythonIpcManager', () => {
 
 	describe('logger integration', () => {
 		it('accepts optional logger in constructor', async () => {
-			const mockLogger = {
-				debug: vi.fn().mockResolvedValue(undefined),
-				info: vi.fn().mockResolvedValue(undefined),
-				warn: vi.fn().mockResolvedValue(undefined),
-				error: vi.fn().mockResolvedValue(undefined),
-				fatal: vi.fn().mockResolvedValue(undefined),
-			};
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
 
-			const manager = new TestPythonManager({
-				logger: mockLogger as any,
-			});
+			const manager = new TestPythonManager({ logger });
 
 			expect(manager).toBeDefined();
 		});
@@ -690,6 +696,110 @@ describe('PythonIpcManager', () => {
 			await manager.initialize();
 
 			expect(manager.isInitialized).toBe(true);
+		});
+
+		it('logs at debug level when process initializes successfully', async () => {
+			const mockProcess = createMockProcess();
+			mockResolvePython.mockResolvedValue('/usr/bin/python3');
+			mockCheckPythonVersion.mockResolvedValue(undefined);
+			mockCheckPythonPackages.mockResolvedValue(undefined);
+			mockSpawn.mockReturnValue(mockProcess as any);
+
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
+			const manager = new TestPythonManager({ logger });
+			await manager.initialize();
+
+			const debugEntries = transport.write.mock.calls
+				.map((call) => call[0])
+				.filter((entry) => entry.level === LogLevel.DEBUG);
+			expect(debugEntries.some((e) => e.message.includes('initialized successfully'))).toBe(true);
+		});
+
+		it('logs at warn level when request times out', async () => {
+			vi.useFakeTimers();
+			const mockProcess = createMockProcess();
+			mockResolvePython.mockResolvedValue('/usr/bin/python3');
+			mockCheckPythonVersion.mockResolvedValue(undefined);
+			mockCheckPythonPackages.mockResolvedValue(undefined);
+			mockSpawn.mockReturnValue(mockProcess as any);
+
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
+			const manager = new TestPythonManager({ logger, requestTimeoutMs: 100 });
+			await manager.initialize();
+
+			const sendPromise = manager.exposedSend('slow', {}).catch(() => undefined);
+			await vi.advanceTimersByTimeAsync(200);
+			await sendPromise;
+
+			const warnEntries = transport.write.mock.calls
+				.map((call) => call[0])
+				.filter((entry) => entry.level === LogLevel.WARN);
+			expect(warnEntries.some((e) => e.message.includes('timed out'))).toBe(true);
+
+			vi.useRealTimers();
+		});
+
+		it('logs at warn level when process exits with non-zero code', async () => {
+			const mockProcess = createMockProcess();
+			mockResolvePython.mockResolvedValue('/usr/bin/python3');
+			mockCheckPythonVersion.mockResolvedValue(undefined);
+			mockCheckPythonPackages.mockResolvedValue(undefined);
+			mockSpawn.mockReturnValue(mockProcess as any);
+
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
+			const manager = new TestPythonManager({ logger });
+			await manager.initialize();
+
+			mockProcess.triggerExit(1);
+
+			const warnEntries = transport.write.mock.calls
+				.map((call) => call[0])
+				.filter((entry) => entry.level === LogLevel.WARN);
+			expect(warnEntries.some((e) => e.message.includes('non-zero code'))).toBe(true);
+		});
+
+		it('logs at debug level when process exits cleanly', async () => {
+			const mockProcess = createMockProcess();
+			mockResolvePython.mockResolvedValue('/usr/bin/python3');
+			mockCheckPythonVersion.mockResolvedValue(undefined);
+			mockCheckPythonPackages.mockResolvedValue(undefined);
+			mockSpawn.mockReturnValue(mockProcess as any);
+
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
+			const manager = new TestPythonManager({ logger });
+			await manager.initialize();
+
+			transport.write.mockClear();
+			mockProcess.triggerExit(0);
+
+			const warnEntries = transport.write.mock.calls
+				.map((call) => call[0])
+				.filter((entry) => entry.level === LogLevel.WARN);
+			expect(warnEntries.some((e) => e.message.includes('exited'))).toBe(false);
+		});
+
+		it('logs at error level when process encounters an error event', async () => {
+			const mockProcess = createMockProcess();
+			mockResolvePython.mockResolvedValue('/usr/bin/python3');
+			mockCheckPythonVersion.mockResolvedValue(undefined);
+			mockCheckPythonPackages.mockResolvedValue(undefined);
+			mockSpawn.mockReturnValue(mockProcess as any);
+
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
+			const manager = new TestPythonManager({ logger });
+			await manager.initialize();
+
+			mockProcess.triggerError(new Error('ENOENT'));
+
+			const errorEntries = transport.write.mock.calls
+				.map((call) => call[0])
+				.filter((entry) => entry.level === LogLevel.ERROR);
+			expect(errorEntries.some((e) => e.message.includes('encountered an error'))).toBe(true);
 		});
 	});
 
@@ -718,25 +828,19 @@ describe('PythonIpcManager', () => {
 	});
 
 	describe('abstract methods', () => {
-		it('enforces abstract getMinPythonVersion implementation', () => {
-			expect(() => {
-				const manager = new TestPythonManager();
-				manager['getMinPythonVersion']();
-			}).toBeDefined();
+		it('getMinPythonVersion returns the configured version string', () => {
+			const manager = new TestPythonManager();
+			expect(manager['getMinPythonVersion']()).toBe('3.9.0');
 		});
 
-		it('enforces abstract getRequiredPackages implementation', () => {
-			expect(() => {
-				const manager = new TestPythonManager();
-				manager['getRequiredPackages']();
-			}).toBeDefined();
+		it('getRequiredPackages returns an array', () => {
+			const manager = new TestPythonManager();
+			expect(Array.isArray(manager['getRequiredPackages']())).toBe(true);
 		});
 
-		it('enforces abstract getScriptPath implementation', () => {
-			expect(() => {
-				const manager = new TestPythonManager();
-				manager['getScriptPath']();
-			}).toBeDefined();
+		it('getScriptPath returns the configured path string', () => {
+			const manager = new TestPythonManager();
+			expect(manager['getScriptPath']()).toBe('/fake/script.py');
 		});
 	});
 
@@ -1060,7 +1164,7 @@ describe('PythonIpcManager', () => {
 
 			await new Promise((r) => setImmediate(r));
 
-			mockProcess.exitHandlers[0](1);
+			mockProcess.triggerExit(1);
 
 			await expect(sendPromise).rejects.toThrow(/exited with code 1/);
 		});
@@ -1079,7 +1183,7 @@ describe('PythonIpcManager', () => {
 
 			await new Promise((r) => setImmediate(r));
 
-			mockProcess.errorHandlers[0](new Error('Spawn error'));
+			mockProcess.triggerError(new Error('Spawn error'));
 
 			await expect(sendPromise).rejects.toThrow('Spawn error');
 		});

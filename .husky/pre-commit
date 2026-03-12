@@ -1,1 +1,20 @@
+# Reject non-semver dependency versions — all versions must be valid semver ranges
+node --input-type=module << 'EOF'
+import { readFileSync } from 'fs';
+const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+const nonSemver = /^(file:|workspace:|link:|portal:|git[+#]|github:|gitlab:|bitbucket:|https?:\/\/)/;
+const sections = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
+const invalid = [];
+for (const section of sections) {
+  for (const [name, ver] of Object.entries(pkg[section] ?? {})) {
+    if (nonSemver.test(ver.trim())) invalid.push(`  ${section}[${name}]: ${ver}`);
+  }
+}
+if (invalid.length) {
+  process.stderr.write('Error: package.json contains non-semver dependency versions:\n');
+  invalid.forEach(l => process.stderr.write(l + '\n'));
+  process.exit(1);
+}
+EOF
+
 yarn typecheck && yarn lint && yarn test && yarn build

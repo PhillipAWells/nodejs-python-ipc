@@ -3,7 +3,7 @@ import { createInterface, type Interface as ReadlineInterface } from 'node:readl
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { EventHandler } from '@pawells/rxjs-events';
-import { Logger } from '@pawells/logger';
+import type { Logger } from '@pawells/logger';
 import { resolvePython, checkPythonVersion, checkPythonPackages } from './python-resolver';
 
 /**
@@ -158,6 +158,10 @@ export abstract class PythonIpcManager {
 
 	private readonly logger?: Logger;
 
+	private sigTermHandler?: () => void;
+
+	private sigIntHandler?: () => void;
+
 	/**
 	 * Event handler for process lifecycle events (exit and error)
 	 */
@@ -256,6 +260,40 @@ export abstract class PythonIpcManager {
 	}
 
 	/**
+	 * Centralized warning logging.
+	 *
+	 * Uses the configured logger if available, otherwise falls back to the DEBUG
+	 * environment variable. Logs are only emitted if logging is enabled.
+	 *
+	 * @param message - The warning message to log
+	 * @param metadata - Optional structured metadata to include with the log
+	 */
+	private logWarn(message: string, metadata?: Record<string, unknown>): void {
+		if (this.logger) {
+			this.logger.warn(message, metadata).catch(console.error);
+		} else if (process.env['DEBUG']?.includes('nodejs-python-ipc')) {
+			console.error(`[Warn] ${message}`, metadata ?? '');
+		}
+	}
+
+	/**
+	 * Centralized error logging.
+	 *
+	 * Uses the configured logger if available, otherwise falls back to the DEBUG
+	 * environment variable. Logs are only emitted if logging is enabled.
+	 *
+	 * @param message - The error message to log
+	 * @param metadata - Optional structured metadata to include with the log
+	 */
+	private logError(message: string, metadata?: Record<string, unknown>): void {
+		if (this.logger) {
+			this.logger.error(message, metadata).catch(console.error);
+		} else if (process.env['DEBUG']?.includes('nodejs-python-ipc')) {
+			console.error(`[Error] ${message}`, metadata ?? '');
+		}
+	}
+
+	/**
 	 * Initialize the Python process and validate the environment.
 	 *
 	 * Performs the following steps:
@@ -306,17 +344,55 @@ export abstract class PythonIpcManager {
 		}
 		this.process = spawn(pythonPath, [scriptPath], {
 			stdio: ['pipe', 'pipe', 'pipe'],
-			timeout: PythonIpcManager.SPAWN_TIMEOUT_MS,
+			// NOTE: do NOT pass `timeout` here. spawn()'s timeout option kills the process
+			// after N ms of *total runtime*, not after N ms of startup. A long-lived worker
+			// process would be killed after SPAWN_TIMEOUT_MS regardless of whether it is
+			// still handling requests. Startup failures surface immediately as 'error' events;
+			// the Promise below also enforces a true startup deadline.
 		});
 
 		if (!this.process.stdout) {
 			throw new Error('Failed to establish stdout stream from Python process');
 		}
 
+		// Guard against the process hanging indefinitely before emitting 'spawn'.
+		// This is the correct way to enforce a startup deadline: race the 'spawn' event
+		// (process started successfully) against 'error' (immediate failure, e.g. ENOENT)
+		// and a wall-clock timeout.
+		await new Promise<void>((resolve, reject) => {
+			const timer = setTimeout(() => {
+				this.process?.kill('SIGKILL');
+				this.process = null;
+				reject(new Error(`Python process did not start within ${PythonIpcManager.SPAWN_TIMEOUT_MS}ms`));
+			}, PythonIpcManager.SPAWN_TIMEOUT_MS);
+
+			const onSpawn = (): void => {
+				clearTimeout(timer);
+				// Remove the one-shot error listener so it does not shadow the permanent one.
+				this.process?.removeListener('error', onError);
+				resolve();
+			};
+
+			const onError = (err: Error): void => {
+				clearTimeout(timer);
+				this.process?.removeListener('spawn', onSpawn);
+				this.process = null;
+				reject(err);
+			};
+
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			this.process!.once('spawn', onSpawn);
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			this.process!.once('error', onError);
+		});
+
 		// Set up readline interface to read line-delimited JSON from stdout
 		this.readline = createInterface({
 			input: this.process.stdout,
-			crlfDelay: Infinity, // Accept lines of any length; no CRLF size restriction
+			// crlfDelay: Infinity tells readline to wait indefinitely after a bare \r
+			// before deciding whether a \n follows, i.e. treat \r\n as one line ending
+			// regardless of any delay between the two bytes.
+			crlfDelay: Infinity,
 		});
 
 		// Buffer stderr output for error reporting
@@ -360,6 +436,17 @@ export abstract class PythonIpcManager {
 		});
 
 		this.process.on('exit', (code) => {
+			// Mark as no longer running so isInitialized reflects reality immediately,
+			// not only after the next send() detects an unwritable stdin.
+			this.initialized = false;
+
+			const subscribers = this.ProcessEvents.GetSubscriptionCount();
+			if (code !== 0) {
+				this.logWarn('Python process exited with non-zero code', { exitCode: code, pendingRequests: this.pending.size, subscribers });
+			} else {
+				this.logDebug('Python process exited', { exitCode: code, pendingRequests: this.pending.size, subscribers });
+			}
+
 			// Emit lifecycle event
 			this.ProcessEvents.Trigger({
 				type: 'exit',
@@ -367,10 +454,11 @@ export abstract class PythonIpcManager {
 				stderr: stderrBuffer,
 			});
 
-			// Reject all pending requests if process dies unexpectedly (Fix B)
-			// This enables fast failure instead of 30s timeout for in-flight requests
-			if (code !== 0 && code !== null) {
-				const entries = Array.from(this.pending.entries());
+			// Reject all in-flight requests regardless of exit code. Even a clean exit
+			// (code 0) means no further responses will arrive, so pending requests must
+			// not be left to hang until their individual timeouts fire.
+			const entries = Array.from(this.pending.entries());
+			if (entries.length > 0) {
 				const errorMsg = stderrBuffer.trim()
 					? `Python process exited with code ${code}\nstderr:\n${stderrBuffer}`
 					: `Python process exited with code ${code}`;
@@ -383,6 +471,12 @@ export abstract class PythonIpcManager {
 		});
 
 		this.process.on('error', (err) => {
+			// Mark as no longer running immediately (mirrors the exit handler).
+			this.initialized = false;
+
+			const subscribers = this.ProcessEvents.GetSubscriptionCount();
+			this.logError('Python process encountered an error', { error: err.message, pendingRequests: this.pending.size, subscribers });
+
 			// Emit lifecycle event
 			this.ProcessEvents.Trigger({
 				type: 'error',
@@ -390,8 +484,7 @@ export abstract class PythonIpcManager {
 				stderr: stderrBuffer,
 			});
 
-			// Reject all pending requests if process encounters an error
-			// This handles spawn errors and other process-level failures
+			// Reject all pending requests on any process-level error.
 			const entries = Array.from(this.pending.entries());
 			const errorMsg = `Python process error: ${err.message}`;
 			for (const [id, { reject, timeout }] of entries) {
@@ -402,6 +495,7 @@ export abstract class PythonIpcManager {
 		});
 
 		this.initialized = true;
+		this.logDebug('Python process initialized successfully', { scriptPath });
 	}
 
 	/**
@@ -450,7 +544,7 @@ export abstract class PythonIpcManager {
 			return await new Promise<TResult>((resolve, reject) => {
 				const timeout = setTimeout(() => {
 					this.pending.delete(requestId);
-					this.logDebug('Request timed out', { requestId, timeoutMs: this.requestTimeoutMs });
+					this.logWarn('Request timed out', { requestId, timeoutMs: this.requestTimeoutMs, type });
 					reject(new Error(`Request ${requestId} timed out after ${this.requestTimeoutMs}ms`));
 				}, this.requestTimeoutMs);
 
@@ -567,6 +661,17 @@ export abstract class PythonIpcManager {
 		this.process = null;
 		this.initialized = false;
 
+		// Remove signal handlers registered by setupSignalHandlers() to prevent
+		// accumulation across multiple manager instances or repeated destroy() calls.
+		if (this.sigTermHandler) {
+			process.off('SIGTERM', this.sigTermHandler);
+			this.sigTermHandler = undefined;
+		}
+		if (this.sigIntHandler) {
+			process.off('SIGINT', this.sigIntHandler);
+			this.sigIntHandler = undefined;
+		}
+
 		// Clean up event handler
 		this.ProcessEvents.Destroy();
 	}
@@ -588,11 +693,19 @@ export abstract class PythonIpcManager {
 	 * ```
 	 */
 	public setupSignalHandlers(): void {
+		// Guard against duplicate registration if called more than once.
+		if (this.sigTermHandler ?? this.sigIntHandler) {
+			return;
+		}
+
 		const destroy = (): void => {
 			this.destroy().catch((err) => {
 				console.error('Error during signal-based shutdown:', err);
 			});
 		};
+
+		this.sigTermHandler = destroy;
+		this.sigIntHandler = destroy;
 		process.on('SIGTERM', destroy);
 		process.on('SIGINT', destroy);
 	}

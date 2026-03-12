@@ -2,6 +2,8 @@ FROM debian:bookworm-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV NODE_OPTIONS="--experimental-vm-modules --no-warnings"
+ENV COREPACK_ENABLE_STRICT=0
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
 # Enable non-free/contrib repos, upgrade, and install packages in one layer
 RUN apt-get update \
