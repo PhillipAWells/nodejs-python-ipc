@@ -355,7 +355,10 @@ export abstract class PythonIpcManager {
 		// Set up readline interface to read line-delimited JSON from stdout
 		this.readline = createInterface({
 			input: this.process.stdout,
-			crlfDelay: Infinity, // Accept lines of any length; no CRLF size restriction
+			// crlfDelay: Infinity tells readline to wait indefinitely after a bare \r
+			// before deciding whether a \n follows, i.e. treat \r\n as one line ending
+			// regardless of any delay between the two bytes.
+			crlfDelay: Infinity,
 		});
 
 		// Buffer stderr output for error reporting

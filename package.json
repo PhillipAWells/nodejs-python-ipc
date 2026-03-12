@@ -14,8 +14,6 @@
 	},
 	"scripts": {
 		"build": "tsc --project tsconfig.build.json",
-		"start": "node build/index.js",
-		"dev": "tsc --project tsconfig.build.json && node build/index.js",
 		"watch": "tsc --watch --project tsconfig.build.json",
 		"typecheck": "tsc --project tsconfig.test.json --noEmit",
 		"lint": "eslint src/",
@@ -23,7 +21,7 @@
 		"test": "vitest run",
 		"test:ui": "vitest --ui",
 		"test:coverage": "vitest --coverage",
-		"prepublishOnly": "npm run build",
+		"prepublishOnly": "yarn build",
 		"prepare": "husky"
 	},
 	"devDependencies": {

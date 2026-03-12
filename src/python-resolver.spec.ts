@@ -102,15 +102,13 @@ describe('python-resolver', () => {
 			// Integration test - attempts to verify Python version without mocking
 			try {
 				const { checkPythonVersion: checkFunc } = await import('./python-resolver');
-				// Try to check a version - will fail if Python not available
-				// But that's okay, we're testing the codepath
 				await checkFunc('/usr/bin/python3', '3.8');
-				// If it succeeds, Python is installed
-				expect(true).toBe(true);
+				// Success path: a real Python 3.8+ binary exists at /usr/bin/python3
+				expect(true).toBe(true); // intentional no-op: success is the assertion
 			} catch (error) {
-				// Any error (not found, wrong version) is acceptable
-				// We just want to exercise the code path
-				expect(error).toBeDefined();
+				// Acceptable failures: Python not installed, version too old, or
+				// the binary path is wrong for this system.
+				expect(error).toBeInstanceOf(Error);
 			}
 		});
 	});
