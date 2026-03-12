@@ -196,9 +196,20 @@ describe('python-resolver', () => {
 			}
 		});
 
-		it('throws when patch version is lower but major and minor match', () => {
-			// When required is "3.10" and found is [3, 10, 0], it should pass
-			expect(() => assertVersionMeetsRequirement([3, 10, 0], '3.10')).not.toThrow();
+		it('passes when patch versions are equal (major.minor.patch required)', () => {
+			expect(() => assertVersionMeetsRequirement([3, 10, 0], '3.10.0')).not.toThrow();
+		});
+
+		it('throws when patch is lower and major.minor match (full semver required)', () => {
+			expect(() => assertVersionMeetsRequirement([3, 9, 0], '3.9.1')).toThrow(PythonVersionError);
+		});
+
+		it('passes when patch is higher and major.minor match (full semver required)', () => {
+			expect(() => assertVersionMeetsRequirement([3, 9, 2], '3.9.1')).not.toThrow();
+		});
+
+		it('throws when only patch of required is specified and found patch is lower', () => {
+			expect(() => assertVersionMeetsRequirement([3, 8, 5], '3.8.6')).toThrow(PythonVersionError);
 		});
 
 		it('correctly parses required version with decimals', () => {

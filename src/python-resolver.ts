@@ -32,18 +32,19 @@ export function parsePythonVersion(versionOutput: string): [number, number, numb
 /**
  * Asserts that a found Python version meets the minimum required version.
  *
- * Compares a parsed version tuple against a required version string
- * (e.g., "3.10"). Throws if the found version is older than required.
- * Only major and minor version components are compared.
+ * Compares a parsed version tuple against a required version string using
+ * standard semver precedence: major → minor → patch. All three components
+ * present in `required` are compared; omitted components default to 0.
  *
  * @param found - A tuple of [major, minor, patch] version numbers
- * @param required - The minimum required version string (e.g., "3.10")
+ * @param required - The minimum required version string (e.g., "3.10" or "3.10.1")
  * @throws {PythonVersionError} When the found version is older than required
  *
  * @example
  * ```typescript
- * assertVersionMeetsRequirement([3, 10, 2], '3.9'); // Passes
- * assertVersionMeetsRequirement([3, 8, 0], '3.10'); // Throws PythonVersionError
+ * assertVersionMeetsRequirement([3, 10, 2], '3.9');   // Passes
+ * assertVersionMeetsRequirement([3, 8, 0], '3.10');   // Throws PythonVersionError
+ * assertVersionMeetsRequirement([3, 9, 0], '3.9.1');  // Throws PythonVersionError
  * ```
  */
 export function assertVersionMeetsRequirement(
@@ -51,10 +52,14 @@ export function assertVersionMeetsRequirement(
 	required: string,
 ): void {
 	const parts = required.split('.').map((p) => parseInt(p, 10));
-	const [reqMajor = 0, reqMinor = 0] = parts;
-	const [foundMajor, foundMinor] = found;
+	const [reqMajor = 0, reqMinor = 0, reqPatch = 0] = parts;
+	const [foundMajor, foundMinor, foundPatch] = found;
 
-	if (foundMajor < reqMajor || (foundMajor === reqMajor && foundMinor < reqMinor)) {
+	if (
+		foundMajor < reqMajor ||
+		(foundMajor === reqMajor && foundMinor < reqMinor) ||
+		(foundMajor === reqMajor && foundMinor === reqMinor && foundPatch < reqPatch)
+	) {
 		const foundStr = found.join('.');
 		throw new PythonVersionError(foundStr, required);
 	}
