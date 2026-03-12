@@ -440,9 +440,17 @@ __metadata:
   linkType: hard
 
 "@pawells/logger@npm:^1.0.3":
-  version: 1.0.3
-  resolution: "@pawells/logger@npm:1.0.3"
-  checksum: 10c0/dcac89f90ebd694d9fb293b86d614e8b46f4d1fc5cee1fb257fa0f0c4a066421a75d33f4c55bcc5e9f2278e9e210c833b1757839f90e0840bcbf08c03483a206
+  version: 1.2.1
+  resolution: "@pawells/logger@npm:1.2.1"
+  peerDependencies:
+    "@jest/globals": ">=27.0.0"
+    vitest: ">=1.0.0"
+  peerDependenciesMeta:
+    "@jest/globals":
+      optional: true
+    vitest:
+      optional: true
+  checksum: 10c0/c64655a4d50c69463a6beb6b4446a4cee3e8087bb8c08466e8056ca411dfe2a0b0e87db9b3d98eab02dca911ac9e4e7b1b953d18619ff6d713974e0d6d6d0b1d
   languageName: node
   linkType: hard
 
