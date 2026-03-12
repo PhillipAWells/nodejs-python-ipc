@@ -3,7 +3,7 @@ import { createInterface, type Interface as ReadlineInterface } from 'node:readl
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { EventHandler } from '@pawells/rxjs-events';
-import { Logger } from '@pawells/logger';
+import type { Logger } from '@pawells/logger';
 import { resolvePython, checkPythonVersion, checkPythonPackages } from './python-resolver';
 
 /**
@@ -306,12 +306,47 @@ export abstract class PythonIpcManager {
 		}
 		this.process = spawn(pythonPath, [scriptPath], {
 			stdio: ['pipe', 'pipe', 'pipe'],
-			timeout: PythonIpcManager.SPAWN_TIMEOUT_MS,
+			// NOTE: do NOT pass `timeout` here. spawn()'s timeout option kills the process
+			// after N ms of *total runtime*, not after N ms of startup. A long-lived worker
+			// process would be killed after SPAWN_TIMEOUT_MS regardless of whether it is
+			// still handling requests. Startup failures surface immediately as 'error' events;
+			// the Promise below also enforces a true startup deadline.
 		});
 
 		if (!this.process.stdout) {
 			throw new Error('Failed to establish stdout stream from Python process');
 		}
+
+		// Guard against the process hanging indefinitely before emitting 'spawn'.
+		// This is the correct way to enforce a startup deadline: race the 'spawn' event
+		// (process started successfully) against 'error' (immediate failure, e.g. ENOENT)
+		// and a wall-clock timeout.
+		await new Promise<void>((resolve, reject) => {
+			const timer = setTimeout(() => {
+				this.process?.kill('SIGKILL');
+				this.process = null;
+				reject(new Error(`Python process did not start within ${PythonIpcManager.SPAWN_TIMEOUT_MS}ms`));
+			}, PythonIpcManager.SPAWN_TIMEOUT_MS);
+
+			const onSpawn = (): void => {
+				clearTimeout(timer);
+				// Remove the one-shot error listener so it does not shadow the permanent one.
+				this.process?.removeListener('error', onError);
+				resolve();
+			};
+
+			const onError = (err: Error): void => {
+				clearTimeout(timer);
+				this.process?.removeListener('spawn', onSpawn);
+				this.process = null;
+				reject(err);
+			};
+
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			this.process!.once('spawn', onSpawn);
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			this.process!.once('error', onError);
+		});
 
 		// Set up readline interface to read line-delimited JSON from stdout
 		this.readline = createInterface({
