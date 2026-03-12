@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createMockTransport } from '@pawells/logger/testing/vitest';
+import { Logger, LogLevel } from '@pawells/logger';
 import { Readable, Writable } from 'node:stream';
 import { PythonIpcManager } from './python-ipc-manager';
 
@@ -31,10 +33,6 @@ const mockCheckPythonPackages = vi.mocked(checkPythonPackages);
 class MockReadableStream extends Readable {
 	constructor() {
 		super({ read() {} });
-	}
-
-	public emitLine(line: string) {
-		this.emit('line', line);
 	}
 }
 
@@ -679,17 +677,10 @@ describe('PythonIpcManager', () => {
 
 	describe('logger integration', () => {
 		it('accepts optional logger in constructor', async () => {
-			const mockLogger = {
-				debug: vi.fn().mockResolvedValue(undefined),
-				info: vi.fn().mockResolvedValue(undefined),
-				warn: vi.fn().mockResolvedValue(undefined),
-				error: vi.fn().mockResolvedValue(undefined),
-				fatal: vi.fn().mockResolvedValue(undefined),
-			};
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
 
-			const manager = new TestPythonManager({
-				logger: mockLogger as any,
-			});
+			const manager = new TestPythonManager({ logger });
 
 			expect(manager).toBeDefined();
 		});
@@ -705,6 +696,110 @@ describe('PythonIpcManager', () => {
 			await manager.initialize();
 
 			expect(manager.isInitialized).toBe(true);
+		});
+
+		it('logs at debug level when process initializes successfully', async () => {
+			const mockProcess = createMockProcess();
+			mockResolvePython.mockResolvedValue('/usr/bin/python3');
+			mockCheckPythonVersion.mockResolvedValue(undefined);
+			mockCheckPythonPackages.mockResolvedValue(undefined);
+			mockSpawn.mockReturnValue(mockProcess as any);
+
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
+			const manager = new TestPythonManager({ logger });
+			await manager.initialize();
+
+			const debugEntries = transport.write.mock.calls
+				.map((call) => call[0])
+				.filter((entry) => entry.level === LogLevel.DEBUG);
+			expect(debugEntries.some((e) => e.message.includes('initialized successfully'))).toBe(true);
+		});
+
+		it('logs at warn level when request times out', async () => {
+			vi.useFakeTimers();
+			const mockProcess = createMockProcess();
+			mockResolvePython.mockResolvedValue('/usr/bin/python3');
+			mockCheckPythonVersion.mockResolvedValue(undefined);
+			mockCheckPythonPackages.mockResolvedValue(undefined);
+			mockSpawn.mockReturnValue(mockProcess as any);
+
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
+			const manager = new TestPythonManager({ logger, requestTimeoutMs: 100 });
+			await manager.initialize();
+
+			const sendPromise = manager.exposedSend('slow', {}).catch(() => undefined);
+			await vi.advanceTimersByTimeAsync(200);
+			await sendPromise;
+
+			const warnEntries = transport.write.mock.calls
+				.map((call) => call[0])
+				.filter((entry) => entry.level === LogLevel.WARN);
+			expect(warnEntries.some((e) => e.message.includes('timed out'))).toBe(true);
+
+			vi.useRealTimers();
+		});
+
+		it('logs at warn level when process exits with non-zero code', async () => {
+			const mockProcess = createMockProcess();
+			mockResolvePython.mockResolvedValue('/usr/bin/python3');
+			mockCheckPythonVersion.mockResolvedValue(undefined);
+			mockCheckPythonPackages.mockResolvedValue(undefined);
+			mockSpawn.mockReturnValue(mockProcess as any);
+
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
+			const manager = new TestPythonManager({ logger });
+			await manager.initialize();
+
+			mockProcess.triggerExit(1);
+
+			const warnEntries = transport.write.mock.calls
+				.map((call) => call[0])
+				.filter((entry) => entry.level === LogLevel.WARN);
+			expect(warnEntries.some((e) => e.message.includes('non-zero code'))).toBe(true);
+		});
+
+		it('logs at debug level when process exits cleanly', async () => {
+			const mockProcess = createMockProcess();
+			mockResolvePython.mockResolvedValue('/usr/bin/python3');
+			mockCheckPythonVersion.mockResolvedValue(undefined);
+			mockCheckPythonPackages.mockResolvedValue(undefined);
+			mockSpawn.mockReturnValue(mockProcess as any);
+
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
+			const manager = new TestPythonManager({ logger });
+			await manager.initialize();
+
+			transport.write.mockClear();
+			mockProcess.triggerExit(0);
+
+			const warnEntries = transport.write.mock.calls
+				.map((call) => call[0])
+				.filter((entry) => entry.level === LogLevel.WARN);
+			expect(warnEntries.some((e) => e.message.includes('exited'))).toBe(false);
+		});
+
+		it('logs at error level when process encounters an error event', async () => {
+			const mockProcess = createMockProcess();
+			mockResolvePython.mockResolvedValue('/usr/bin/python3');
+			mockCheckPythonVersion.mockResolvedValue(undefined);
+			mockCheckPythonPackages.mockResolvedValue(undefined);
+			mockSpawn.mockReturnValue(mockProcess as any);
+
+			const transport = createMockTransport();
+			const logger = new Logger({ service: 'test', level: LogLevel.DEBUG, transport });
+			const manager = new TestPythonManager({ logger });
+			await manager.initialize();
+
+			mockProcess.triggerError(new Error('ENOENT'));
+
+			const errorEntries = transport.write.mock.calls
+				.map((call) => call[0])
+				.filter((entry) => entry.level === LogLevel.ERROR);
+			expect(errorEntries.some((e) => e.message.includes('encountered an error'))).toBe(true);
 		});
 	});
 

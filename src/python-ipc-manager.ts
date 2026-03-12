@@ -260,6 +260,40 @@ export abstract class PythonIpcManager {
 	}
 
 	/**
+	 * Centralized warning logging.
+	 *
+	 * Uses the configured logger if available, otherwise falls back to the DEBUG
+	 * environment variable. Logs are only emitted if logging is enabled.
+	 *
+	 * @param message - The warning message to log
+	 * @param metadata - Optional structured metadata to include with the log
+	 */
+	private logWarn(message: string, metadata?: Record<string, unknown>): void {
+		if (this.logger) {
+			this.logger.warn(message, metadata).catch(console.error);
+		} else if (process.env['DEBUG']?.includes('nodejs-python-ipc')) {
+			console.error(`[Warn] ${message}`, metadata ?? '');
+		}
+	}
+
+	/**
+	 * Centralized error logging.
+	 *
+	 * Uses the configured logger if available, otherwise falls back to the DEBUG
+	 * environment variable. Logs are only emitted if logging is enabled.
+	 *
+	 * @param message - The error message to log
+	 * @param metadata - Optional structured metadata to include with the log
+	 */
+	private logError(message: string, metadata?: Record<string, unknown>): void {
+		if (this.logger) {
+			this.logger.error(message, metadata).catch(console.error);
+		} else if (process.env['DEBUG']?.includes('nodejs-python-ipc')) {
+			console.error(`[Error] ${message}`, metadata ?? '');
+		}
+	}
+
+	/**
 	 * Initialize the Python process and validate the environment.
 	 *
 	 * Performs the following steps:
@@ -406,6 +440,13 @@ export abstract class PythonIpcManager {
 			// not only after the next send() detects an unwritable stdin.
 			this.initialized = false;
 
+			const subscribers = this.ProcessEvents.GetSubscriptionCount();
+			if (code !== 0) {
+				this.logWarn('Python process exited with non-zero code', { exitCode: code, pendingRequests: this.pending.size, subscribers });
+			} else {
+				this.logDebug('Python process exited', { exitCode: code, pendingRequests: this.pending.size, subscribers });
+			}
+
 			// Emit lifecycle event
 			this.ProcessEvents.Trigger({
 				type: 'exit',
@@ -433,6 +474,9 @@ export abstract class PythonIpcManager {
 			// Mark as no longer running immediately (mirrors the exit handler).
 			this.initialized = false;
 
+			const subscribers = this.ProcessEvents.GetSubscriptionCount();
+			this.logError('Python process encountered an error', { error: err.message, pendingRequests: this.pending.size, subscribers });
+
 			// Emit lifecycle event
 			this.ProcessEvents.Trigger({
 				type: 'error',
@@ -451,6 +495,7 @@ export abstract class PythonIpcManager {
 		});
 
 		this.initialized = true;
+		this.logDebug('Python process initialized successfully', { scriptPath });
 	}
 
 	/**
@@ -499,7 +544,7 @@ export abstract class PythonIpcManager {
 			return await new Promise<TResult>((resolve, reject) => {
 				const timeout = setTimeout(() => {
 					this.pending.delete(requestId);
-					this.logDebug('Request timed out', { requestId, timeoutMs: this.requestTimeoutMs });
+					this.logWarn('Request timed out', { requestId, timeoutMs: this.requestTimeoutMs, type });
 					reject(new Error(`Request ${requestId} timed out after ${this.requestTimeoutMs}ms`));
 				}, this.requestTimeoutMs);
 
