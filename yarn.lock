@@ -448,9 +448,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@pawells/logger@npm:^1.0.3":
-  version: 1.2.1
-  resolution: "@pawells/logger@npm:1.2.1"
+"@pawells/logger@npm:^1.2.2":
+  version: 1.2.2
+  resolution: "@pawells/logger@npm:1.2.2"
+  dependencies:
+    "@pawells/typescript-common": "npm:1.3.1"
   peerDependencies:
     "@jest/globals": ">=27.0.0"
     vitest: ">=1.0.0"
@@ -459,7 +461,7 @@ __metadata:
       optional: true
     vitest:
       optional: true
-  checksum: 10c0/c64655a4d50c69463a6beb6b4446a4cee3e8087bb8c08466e8056ca411dfe2a0b0e87db9b3d98eab02dca911ac9e4e7b1b953d18619ff6d713974e0d6d6d0b1d
+  checksum: 10c0/b1a6a1aa67af82d846ed969231f97d4810796460f6817d78c8addb63d692828d0838e66364036a6ab6e52c8890d6b8097cfd4de40b4cf5019958e45fae7ae54e
   languageName: node
   linkType: hard
 
@@ -468,8 +470,8 @@ __metadata:
   resolution: "@pawells/nodejs-python-ipc@workspace:."
   dependencies:
     "@eslint/js": "npm:^10.0.1"
-    "@pawells/logger": "npm:^1.0.3"
-    "@pawells/rxjs-events": "npm:^1.0.3"
+    "@pawells/logger": "npm:^1.2.2"
+    "@pawells/rxjs-events": "npm:^1.1.0"
     "@stylistic/eslint-plugin": "npm:^5.10.0"
     "@types/node": "npm:^25.4.0"
     "@typescript-eslint/eslint-plugin": "npm:^8.57.0"
@@ -490,20 +492,27 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pawells/rxjs-events@npm:^1.0.3":
-  version: 1.0.3
-  resolution: "@pawells/rxjs-events@npm:1.0.3"
+"@pawells/rxjs-events@npm:^1.1.0":
+  version: 1.1.0
+  resolution: "@pawells/rxjs-events@npm:1.1.0"
   dependencies:
-    "@pawells/typescript-common": "npm:^1.1.6"
+    "@pawells/typescript-common": "npm:^1.4.1"
     rxjs: "npm:^7.8.2"
-  checksum: 10c0/f5192e7e1c4c9840f302bfdecd3ca25347842ad1cf6f26d7920cab7ae4696d0418885728f9762fd8c67aa66e0d088f4ca4eda56a1b97623678c2d69e2d1a3c9d
+  checksum: 10c0/5b9c0741b1e3fea73e700f1e4d6e8d9ee37fa29517ab2c4df02c481ab52cfcbd30dc2c8ec004c78a266f694947fb1a9bfe99283a4b716e2c686070adf5357971
   languageName: node
   linkType: hard
 
-"@pawells/typescript-common@npm:^1.1.6":
-  version: 1.1.6
-  resolution: "@pawells/typescript-common@npm:1.1.6"
-  checksum: 10c0/530f2ff063608a0ab7fc7ea61792a6764600529a0df94175299e59ec4d071b2dda74fac797fa65ad8defbd51e711e8e6bff86f693a6f4e5a4087af4b24e00b08
+"@pawells/typescript-common@npm:1.3.1":
+  version: 1.3.1
+  resolution: "@pawells/typescript-common@npm:1.3.1"
+  checksum: 10c0/f2333dd2648da6b280ff8891a0a01ffe2d933c3474d904c5863a71a15026d7a6af53f577ba498171e5b3904227cd5bb1dedda804b550dc8ac83e0ed799d31041
+  languageName: node
+  linkType: hard
+
+"@pawells/typescript-common@npm:^1.4.1":
+  version: 1.4.1
+  resolution: "@pawells/typescript-common@npm:1.4.1"
+  checksum: 10c0/30ddd4b80d194ddb7861bdd20fe10ec20aa3231218e4d5fa225784613c4e72526d67b8d2f0dde43e7dcc2c0ef5794d66a9f780478260199a9a17e18ddb0d4907
   languageName: node
   linkType: hard
 

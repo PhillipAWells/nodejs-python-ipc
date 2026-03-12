@@ -73,9 +73,9 @@
 		"access": "public"
 	},
 	"dependencies": {
-		"@pawells/rxjs-events": "^1.0.3"
+		"@pawells/rxjs-events": "^1.1.0"
 	},
 	"optionalDependencies": {
-		"@pawells/logger": "^1.0.3"
+		"@pawells/logger": "^1.2.2"
 	}
 }
