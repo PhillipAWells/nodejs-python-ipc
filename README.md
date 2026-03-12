@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@pawells/nodejs-python-ipc)](https://www.npmjs.com/package/@pawells/nodejs-python-ipc)
 [![GitHub Release](https://img.shields.io/github/v/release/PhillipAWells/nodejs-python-ipc)](https://github.com/PhillipAWells/nodejs-python-ipc/releases)
 [![CI](https://github.com/PhillipAWells/nodejs-python-ipc/actions/workflows/ci.yml/badge.svg)](https://github.com/PhillipAWells/nodejs-python-ipc/actions/workflows/ci.yml)
-[![Node](https://img.shields.io/badge/node-%3E%3D24-brightgreen)](https://nodejs.org)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/PhillipAWells?style=social)](https://github.com/sponsors/PhillipAWells)
 
@@ -522,7 +522,7 @@ When a logger instance is provided, the `DEBUG` environment variable is ignored.
 
 ## Requirements
 
-- **Node.js** >= 24.0.0 (uses native ESM, no CommonJS)
+- **Node.js** >= 22.0.0 (uses native ESM, no CommonJS)
 - **Python** >= 3.9 (or your project's minimum requirement)
 - **Yarn** >= 4.12.0 (Berry, via corepack)
 

@@ -157,7 +157,7 @@ Project uses a 4-config split:
 - **`tsconfig.test.json`** — Vitest test configuration.
 - **`tsconfig.eslint.json`** — ESLint type-aware linting configuration.
 
-General settings: Requires Node.js >= 24.0.0. Outputs to `./build/`, targets ES2022, module resolution `bundler`. Declaration files (`.d.ts`) and source maps are emitted. Strict mode is fully enabled.
+General settings: Requires Node.js >= 22.0.0. Outputs to `./build/`, targets ES2022, module resolution `bundler`. Declaration files (`.d.ts`) and source maps are emitted. Strict mode is fully enabled.
 
 ## Testing
 
@@ -301,7 +301,7 @@ The `PythonIpcManager` class defines the following static constants:
 
 ## CI/CD
 
-Single workflow (`.github/workflows/ci.yml`) triggered on push to `main`, PRs to `main`, and `v*` tags. Jobs run on Node 24 (`ubuntu-latest`):
+Single workflow (`.github/workflows/ci.yml`) triggered on push to `main`, PRs to `main`, and `v*` tags. Jobs run on Node 22 (`ubuntu-latest`):
 
 - **`validate`** (typecheck + lint) and **`test`** run in parallel on every push/PR.
 - **`build`** runs after both pass, only on non-tag pushes.

@@ -40,8 +40,11 @@ jobs:
         run: yarn lint
 
   test:
-    name: Test (Node 24)
+    name: Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ['22', '24']
     steps:
       - uses: actions/checkout@v6
 
@@ -50,7 +53,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: '24'
+          node-version: ${{ matrix.node-version }}
           cache: 'yarn'
 
       - name: Install dependencies

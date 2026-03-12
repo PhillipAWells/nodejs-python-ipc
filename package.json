@@ -1,7 +1,7 @@
 {
 	"name": "@pawells/nodejs-python-ipc",
 	"displayName": "Node.js Python IPC",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"description": "TypeScript library for managing long-lived Python child processes with JSON-based IPC",
 	"type": "module",
 	"main": "./build/index.js",
@@ -62,7 +62,7 @@
 	},
 	"homepage": "https://github.com/PhillipAWells/nodejs-python-ipc#readme",
 	"engines": {
-		"node": ">=24.0.0"
+		"node": ">=22.0.0"
 	},
 	"packageManager": "yarn@4.12.0",
 	"files": [
