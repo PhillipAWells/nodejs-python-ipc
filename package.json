@@ -21,6 +21,7 @@
 		"test": "vitest run",
 		"test:ui": "vitest --ui",
 		"test:coverage": "vitest --coverage",
+		"pipeline": "yarn typecheck && yarn lint && yarn test && yarn build",
 		"prepublishOnly": "yarn build",
 		"prepare": "husky"
 	},
