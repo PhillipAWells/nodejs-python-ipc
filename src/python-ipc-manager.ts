@@ -158,6 +158,10 @@ export abstract class PythonIpcManager {
 
 	private readonly logger?: Logger;
 
+	private sigTermHandler?: () => void;
+
+	private sigIntHandler?: () => void;
+
 	/**
 	 * Event handler for process lifecycle events (exit and error)
 	 */
@@ -395,6 +399,10 @@ export abstract class PythonIpcManager {
 		});
 
 		this.process.on('exit', (code) => {
+			// Mark as no longer running so isInitialized reflects reality immediately,
+			// not only after the next send() detects an unwritable stdin.
+			this.initialized = false;
+
 			// Emit lifecycle event
 			this.ProcessEvents.Trigger({
 				type: 'exit',
@@ -402,10 +410,11 @@ export abstract class PythonIpcManager {
 				stderr: stderrBuffer,
 			});
 
-			// Reject all pending requests if process dies unexpectedly (Fix B)
-			// This enables fast failure instead of 30s timeout for in-flight requests
-			if (code !== 0 && code !== null) {
-				const entries = Array.from(this.pending.entries());
+			// Reject all in-flight requests regardless of exit code. Even a clean exit
+			// (code 0) means no further responses will arrive, so pending requests must
+			// not be left to hang until their individual timeouts fire.
+			const entries = Array.from(this.pending.entries());
+			if (entries.length > 0) {
 				const errorMsg = stderrBuffer.trim()
 					? `Python process exited with code ${code}\nstderr:\n${stderrBuffer}`
 					: `Python process exited with code ${code}`;
@@ -418,6 +427,9 @@ export abstract class PythonIpcManager {
 		});
 
 		this.process.on('error', (err) => {
+			// Mark as no longer running immediately (mirrors the exit handler).
+			this.initialized = false;
+
 			// Emit lifecycle event
 			this.ProcessEvents.Trigger({
 				type: 'error',
@@ -425,8 +437,7 @@ export abstract class PythonIpcManager {
 				stderr: stderrBuffer,
 			});
 
-			// Reject all pending requests if process encounters an error
-			// This handles spawn errors and other process-level failures
+			// Reject all pending requests on any process-level error.
 			const entries = Array.from(this.pending.entries());
 			const errorMsg = `Python process error: ${err.message}`;
 			for (const [id, { reject, timeout }] of entries) {
@@ -602,6 +613,17 @@ export abstract class PythonIpcManager {
 		this.process = null;
 		this.initialized = false;
 
+		// Remove signal handlers registered by setupSignalHandlers() to prevent
+		// accumulation across multiple manager instances or repeated destroy() calls.
+		if (this.sigTermHandler) {
+			process.off('SIGTERM', this.sigTermHandler);
+			this.sigTermHandler = undefined;
+		}
+		if (this.sigIntHandler) {
+			process.off('SIGINT', this.sigIntHandler);
+			this.sigIntHandler = undefined;
+		}
+
 		// Clean up event handler
 		this.ProcessEvents.Destroy();
 	}
@@ -623,11 +645,19 @@ export abstract class PythonIpcManager {
 	 * ```
 	 */
 	public setupSignalHandlers(): void {
+		// Guard against duplicate registration if called more than once.
+		if (this.sigTermHandler ?? this.sigIntHandler) {
+			return;
+		}
+
 		const destroy = (): void => {
 			this.destroy().catch((err) => {
 				console.error('Error during signal-based shutdown:', err);
 			});
 		};
+
+		this.sigTermHandler = destroy;
+		this.sigIntHandler = destroy;
 		process.on('SIGTERM', destroy);
 		process.on('SIGINT', destroy);
 	}
