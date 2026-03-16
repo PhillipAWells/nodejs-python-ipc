@@ -44,7 +44,7 @@ export {
 	PythonNotFoundError,
 	PythonVersionError,
 	PythonDependencyError,
-} from './errors';
+} from './errors.js';
 
 // Python utilities
 export {
@@ -53,7 +53,7 @@ export {
 	checkPythonPackages,
 	parsePythonVersion,
 	assertVersionMeetsRequirement,
-} from './python-resolver';
+} from './python-resolver.js';
 
 // IPC Manager
 export type {
@@ -61,8 +61,8 @@ export type {
 	PythonResponse,
 	PythonIpcManagerOptions,
 	ProcessLifecycleEvent,
-} from './python-ipc-manager';
+} from './python-ipc-manager.js';
 
 export {
 	PythonIpcManager,
-} from './python-ipc-manager';
+} from './python-ipc-manager.js';
