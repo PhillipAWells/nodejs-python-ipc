@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { PythonNotFoundError, PythonVersionError, PythonDependencyError } from './errors';
+import { PythonNotFoundError, PythonVersionError, PythonDependencyError } from './errors.js';
 
 const execFileAsync = promisify(execFile);
 

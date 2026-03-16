@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { EventHandler } from '@pawells/rxjs-events';
 import type { Logger } from '@pawells/logger';
-import { resolvePython, checkPythonVersion, checkPythonPackages } from './python-resolver';
+import { resolvePython, checkPythonVersion, checkPythonPackages } from './python-resolver.js';
 
 /**
  * Request structure for Python IPC communication.
