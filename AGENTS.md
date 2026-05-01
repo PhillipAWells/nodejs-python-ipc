@@ -301,8 +301,11 @@ The `PythonIpcManager` class defines the following static constants:
 
 ## CI/CD
 
-Single workflow (`.github/workflows/ci.yml`) triggered on push to `main`, PRs to `main`, and `v*` tags. Jobs run on Node 22 (`ubuntu-latest`):
+Main workflow (`.github/workflows/ci.yml`) triggered on push to `main` and `development/*` branches (excluding `v*` tags), PRs to `main`, and manual `workflow_call`. Publish workflow (`.github/workflows/publish.yml`) triggered on `v*` tags. All jobs run on `ubuntu-latest`:
 
-- **`validate`** (typecheck + lint) and **`test`** run in parallel on every push/PR.
-- **`build`** runs after both pass, only on non-tag pushes.
-- **`publish`** runs after both pass on `v*` tags: builds, publishes to npm with provenance, and creates a GitHub Release.
+- **`validate`** (Node 24): typecheck + lint
+- **`test`** (Node 22 & 24 matrix): runs unit tests across both LTS versions
+- **`build`** (Node 24): compiles TypeScript to `./build/`
+- **`publish`** (triggered by `v*` tag push): builds, publishes to npm with OIDC provenance, creates GitHub Release
+
+All CI jobs set `HUSKY=0` to disable pre-commit hooks in the CI environment.
