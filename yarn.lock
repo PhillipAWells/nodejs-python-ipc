@@ -333,7 +333,7 @@ __metadata:
   dependencies:
     "@eslint/js": "npm:^10.0.1"
     "@pawells/logger": "npm:^1.2.2"
-    "@pawells/rxjs-events": "npm:^1.1.0"
+    "@pawells/rxjs-events": "npm:^2.0.0"
     "@stylistic/eslint-plugin": "npm:^5.10.0"
     "@types/node": "npm:^25.4.0"
     "@typescript-eslint/eslint-plugin": "npm:^8.57.0"
@@ -354,13 +354,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@pawells/rxjs-events@npm:^1.1.0":
-  version: 1.1.0
-  resolution: "@pawells/rxjs-events@npm:1.1.0"
+"@pawells/rxjs-events@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "@pawells/rxjs-events@npm:2.0.0"
   dependencies:
-    "@pawells/typescript-common": "npm:^1.4.1"
+    "@pawells/typescript-common": "npm:^2.0.0"
     rxjs: "npm:^7.8.2"
-  checksum: 10c0/5b9c0741b1e3fea73e700f1e4d6e8d9ee37fa29517ab2c4df02c481ab52cfcbd30dc2c8ec004c78a266f694947fb1a9bfe99283a4b716e2c686070adf5357971
+  checksum: 10c0/25d5627cd31c079354cba6bc4f2908a2bfe119a0d2538ec039564bd4dc88c67da27357f7c2dcff42d6bd9f896664d8c737936e351cfdcce1f6e703edf2924509
   languageName: node
   linkType: hard
 
@@ -371,10 +371,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@pawells/typescript-common@npm:^1.4.1":
-  version: 1.4.1
-  resolution: "@pawells/typescript-common@npm:1.4.1"
-  checksum: 10c0/30ddd4b80d194ddb7861bdd20fe10ec20aa3231218e4d5fa225784613c4e72526d67b8d2f0dde43e7dcc2c0ef5794d66a9f780478260199a9a17e18ddb0d4907
+"@pawells/typescript-common@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "@pawells/typescript-common@npm:2.0.0"
+  checksum: 10c0/2210c40ca220f6dafc70455832bae4f54e8acbfdf78dfe4119244c4465c7d90a6300fb36be76e4d372fea3b66f201d24f40285183fa1b6ec39a64f2c171b56c4
   languageName: node
   linkType: hard
 
