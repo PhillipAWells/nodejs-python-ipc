@@ -310,10 +310,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@pawells/logger@npm:^1.2.2":
-  version: 1.2.2
-  resolution: "@pawells/logger@npm:1.2.2"
+"@pawells/logger@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "@pawells/logger@npm:3.0.0"
   dependencies:
+    "@pawells/rxjs-events": "npm:^1.1.0"
     "@pawells/typescript-common": "npm:1.3.1"
   peerDependencies:
     "@jest/globals": ">=27.0.0"
@@ -323,7 +324,7 @@ __metadata:
       optional: true
     vitest:
       optional: true
-  checksum: 10c0/b1a6a1aa67af82d846ed969231f97d4810796460f6817d78c8addb63d692828d0838e66364036a6ab6e52c8890d6b8097cfd4de40b4cf5019958e45fae7ae54e
+  checksum: 10c0/375910c9abb01c6f08a5beb56ee3d89bd4e82033e3289f924d2bbc81752ac90200c34eb3271d83df88c0bfb0ac6db006178cf92101cdcd4020799605afb8a59c
   languageName: node
   linkType: hard
 
@@ -332,7 +333,7 @@ __metadata:
   resolution: "@pawells/nodejs-python-ipc@workspace:."
   dependencies:
     "@eslint/js": "npm:^10.0.1"
-    "@pawells/logger": "npm:^1.2.2"
+    "@pawells/logger": "npm:^3.0.0"
     "@pawells/rxjs-events": "npm:^1.1.0"
     "@stylistic/eslint-plugin": "npm:^5.10.0"
     "@types/node": "npm:^25.4.0"

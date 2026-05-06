@@ -77,6 +77,6 @@
 		"@pawells/rxjs-events": "^1.1.0"
 	},
 	"optionalDependencies": {
-		"@pawells/logger": "^1.2.2"
+		"@pawells/logger": "^3.0.0"
 	}
 }
